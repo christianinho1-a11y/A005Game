@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CS Tenable</title>
+
+  <!-- Make it look good on Chromebooks / laptops -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Main site stylesheet (assumes this file is in games/cs/) -->
+  <link rel="stylesheet" href="../style.css" />
+
+  <!-- No per-game <style> here so styles stay consistent across all games.
+       Use shared classes in style.css instead (game-container, game-card, etc.). -->
+</head>
+<body class="cs-body">
+  <main class="page-wrap">
+    <!-- Header with title + short description -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">CS Tenable</h1>
+        <p class="page-subtitle">
+          A Top 10 guessing game for Computer Science topics. Try to find as many
+          answers as you can before you run out of strikes.
+        </p>
+      </div>
+      <div>
+        <!-- Back link: adjusts for games/cs/cs_tenable.html → cs_games.html -->
+        <a href="../../cs_games.html" class="back-link">&larr; Back to CS Games</a>
+      </div>
+    </header>
+
+    <!-- Main Tenable game container -->
+    <div id="cs-tenable" class="tenable-container game-container">
+      <!-- Category title + tagline -->
+      <header class="tenable-header game-header">
+        <h2 id="tenable-category-title">CS Tenable</h2>
+        <p class="tenable-tagline">
+          Guess the Top 10 items in each category before you reach 3 strikes.
+        </p>
+      </header>
+
+      <!-- Scoreboard: correct guesses + strikes -->
+      <section class="tenable-scoreboard card game-card">
+        <div class="tenable-score">
+          <span class="score-label">Correct:</span>
+          <span id="tenable-correct-count">0</span> /
+          <span id="tenable-total-count">10</span>
+        </div>
+        <div class="tenable-score">
+          <span class="score-label">Strikes:</span>
+          <span id="tenable-strikes-used">0</span> /
+          <span id="tenable-strikes-max">3</span>
+        </div>
+      </section>
+
+      <!-- Grid of 10 hidden answers -->
+      <section class="tenable-answers card game-card">
+        <h3 class="section-title game-section-title">Top 10 Answers</h3>
+        <div id="tenable-answers-grid" class="tenable-answers-grid">
+          <!-- Slots filled by JavaScript -->
+        </div>
+      </section>
+
+      <!-- Guess input + feedback -->
+      <section class="tenable-guess card game-card">
+        <h3 class="section-title game-section-title">Your Guess</h3>
+        <div class="tenable-guess-row">
+          <input
+            type="text"
+            id="tenable-guess-input"
+            class="tenable-input game-input"
+            placeholder="Type a guess… (e.g., Algorithms, Python)"
+            autocomplete="off"
+          />
+          <button id="tenable-submit-btn" class="btn primary">
+            Submit Guess
+          </button>
+        </div>
+        <p id="tenable-message" class="tenable-message game-message"></p>
+        <p id="tenable-summary" class="tenable-summary game-message"></p>
+      </section>
+
+      <!-- Control buttons: reveal, next category, back -->
+      <section class="tenable-controls card game-card">
+        <div class="tenable-controls-row">
+          <button id="tenable-reveal-btn" class="btn secondary">
+            Reveal Remaining
+          </button>
+          <button id="tenable-next-btn" class="btn secondary">
+            Next Category
+          </button>
+        </div>
+        <div class="tenable-controls-row">
+          <button id="tenable-back-btn" class="btn ghost">
+            &larr; Back to CS Menu
+          </button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Game logic (external JS file) -->
+  <script src="cs_tenable.js"></script>
+</body>
+</html>

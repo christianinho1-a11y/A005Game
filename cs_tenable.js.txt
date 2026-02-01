@@ -1,0 +1,443 @@
+// cs_tenable.js
+// ----------------------------------------
+// CS Tenable – Top 10 Computer Science guessing game
+// ----------------------------------------
+// This script powers the CS Tenable game. It assumes the HTML page
+// contains elements with the IDs used below (e.g., tenable-category-title,
+// tenable-answers-grid, tenable-guess-input, etc.).
+//
+// The game:
+// - Randomly selects a CS category with a Top 10 list
+// - Lets students type guesses
+// - Reveals correct answers
+// - Tracks strikes (max 3)
+// - Ends the round when all answers are found or strikes are used
+// ----------------------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+  // ------------------------------
+  // 1. Game data: categories & answers
+  // ------------------------------
+  // This can be easily extended by adding more category objects.
+  const categories = [
+    {
+      title: "Programming Languages Students Should Know",
+      answers: [
+        "Python",
+        "Java",
+        "JavaScript",
+        "C++",
+        "C#",
+        "HTML/CSS",
+        "SQL",
+        "Swift",
+        "Kotlin",
+        "Scratch"
+      ]
+    },
+    {
+      title: "Core Computer Science Ideas",
+      answers: [
+        "Algorithms",
+        "Data structures",
+        "Variables",
+        "Loops",
+        "Conditionals",
+        "Functions",
+        "Abstraction",
+        "Debugging",
+        "Recursion",
+        "Object-oriented programming"
+      ]
+    },
+    {
+      title: "Common Data Structures",
+      answers: [
+        "Array",
+        "List",
+        "Stack",
+        "Queue",
+        "Hash table",
+        "Tree",
+        "Binary search tree",
+        "Heap",
+        "Graph",
+        "Set"
+      ]
+    },
+    {
+      title: "Famous Algorithms",
+      answers: [
+        "Linear search",
+        "Binary search",
+        "Bubble sort",
+        "Selection sort",
+        "Insertion sort",
+        "Merge sort",
+        "Quick sort",
+        "Dijkstra’s shortest path",
+        "Breadth-first search",
+        "Depth-first search"
+      ]
+    },
+    {
+      title: "Computer Science Careers",
+      answers: [
+        "Software developer",
+        "Web developer",
+        "Data scientist",
+        "Game developer",
+        "Cybersecurity analyst",
+        "Network administrator",
+        "Database administrator",
+        "Systems analyst",
+        "Machine learning engineer",
+        "IT support specialist"
+      ]
+    }
+  ];
+
+  // ------------------------------
+  // 2. Game state variables
+  // ------------------------------
+  const maxStrikes = 3;          // strikes allowed per round
+  let currentCategoryIndex = -1; // index of current category in categories[]
+  let currentCategory = null;    // the current category object
+  let revealed = [];             // array of booleans indicating which answers are revealed
+  let strikes = 0;               // current number of strikes
+  let correctCount = 0;          // number of correct answers found
+  let roundOver = false;         // whether the round has ended
+
+  // ------------------------------
+  // 3. DOM element references
+  // ------------------------------
+  const categoryTitleEl = document.getElementById("tenable-category-title");
+  const answersGridEl = document.getElementById("tenable-answers-grid");
+  const correctCountEl = document.getElementById("tenable-correct-count");
+  const totalCountEl = document.getElementById("tenable-total-count");
+  const strikesUsedEl = document.getElementById("tenable-strikes-used");
+  const strikesMaxEl = document.getElementById("tenable-strikes-max");
+  const guessInputEl = document.getElementById("tenable-guess-input");
+  const submitBtnEl = document.getElementById("tenable-submit-btn");
+  const revealBtnEl = document.getElementById("tenable-reveal-btn");
+  const nextBtnEl = document.getElementById("tenable-next-btn");
+  const backBtnEl = document.getElementById("tenable-back-btn");
+  const messageEl = document.getElementById("tenable-message");
+  const summaryEl = document.getElementById("tenable-summary");
+
+  // Safety check: if this script is included on the wrong page, exit gracefully.
+  if (
+    !categoryTitleEl ||
+    !answersGridEl ||
+    !correctCountEl ||
+    !totalCountEl ||
+    !strikesUsedEl ||
+    !strikesMaxEl ||
+    !guessInputEl ||
+    !submitBtnEl ||
+    !revealBtnEl ||
+    !nextBtnEl ||
+    !backBtnEl ||
+    !messageEl ||
+    !summaryEl
+  ) {
+    console.warn("CS Tenable: Required DOM elements not found. Script will not run.");
+    return;
+  }
+
+  // Set constant scoreboard values (10 answers, 3 strikes)
+  totalCountEl.textContent = "10";
+  strikesMaxEl.textContent = maxStrikes.toString();
+
+  // ------------------------------
+  // 4. Helper functions
+  // ------------------------------
+
+  /**
+   * Normalize a string for comparison:
+   * - Trim whitespace
+   * - Convert to lowercase
+   */
+  function normalize(str) {
+    return str.trim().toLowerCase();
+  }
+
+  /**
+   * Select a random category index from the categories array.
+   * No memory of previous categories – repeats across rounds are allowed.
+   */
+  function pickRandomCategoryIndex() {
+    if (categories.length === 0) return -1;
+    return Math.floor(Math.random() * categories.length);
+  }
+
+  /**
+   * Reset game state for a new round.
+   * Called whenever we start a new category.
+   */
+  function resetStateForNewRound() {
+    strikes = 0;
+    correctCount = 0;
+    revealed = new Array(10).fill(false);
+    roundOver = false;
+
+    correctCountEl.textContent = "0";
+    strikesUsedEl.textContent = "0";
+
+    setMessage("", null);
+    setSummary("", null);
+
+    guessInputEl.disabled = false;
+    submitBtnEl.disabled = false;
+    revealBtnEl.disabled = false;
+  }
+
+  /**
+   * Build the 10 answer slots in the grid.
+   * Each starts as "Hidden" until revealed by a correct guess or round end.
+   */
+  function renderAnswersGrid() {
+    answersGridEl.innerHTML = ""; // clear any old slots
+
+    currentCategory.answers.forEach((ans, index) => {
+      const slot = document.createElement("div");
+      slot.className = "tenable-answer-slot";
+      // store the index on the element for later lookup
+      slot.dataset.index = index.toString();
+      slot.textContent = "Hidden";
+      answersGridEl.appendChild(slot);
+    });
+  }
+
+  /**
+   * Reveal a specific answer slot by index.
+   * - Updates the slot text to show the real answer
+   * - Adds CSS classes for styling and highlight animation
+   */
+  function updateAnswerSlot(index, isRevealAll = false) {
+    const slot = answersGridEl.querySelector(
+      '.tenable-answer-slot[data-index="' + index + '"]'
+    );
+    if (!slot) return;
+
+    slot.textContent = currentCategory.answers[index];
+    slot.classList.add("revealed");
+
+    // Only "flash" highlight when we reveal due to a correct guess
+    if (!isRevealAll) {
+      slot.classList.add("highlight");
+      setTimeout(() => slot.classList.remove("highlight"), 600);
+    }
+  }
+
+  /**
+   * Set a short feedback message under the guess input.
+   * type can be "error", "success", or null (for neutral).
+   */
+  function setMessage(text, type) {
+    messageEl.textContent = text;
+    messageEl.classList.remove("error", "success");
+    if (type === "error") {
+      messageEl.classList.add("error");
+    } else if (type === "success") {
+      messageEl.classList.add("success");
+    }
+  }
+
+  /**
+   * Set the summary message at the bottom of the card.
+   * Used to show round-over summary.
+   */
+  function setSummary(text, type) {
+    summaryEl.textContent = text;
+    summaryEl.classList.remove("error", "success");
+    if (type === "error") {
+      summaryEl.classList.add("error");
+    } else if (type === "success") {
+      summaryEl.classList.add("success");
+    }
+  }
+
+  /**
+   * End the current round:
+   * - Mark roundOver
+   * - Reveal all remaining hidden answers
+   * - Disable further guesses
+   * - Show summary text
+   *
+   * reason: "strikes", "perfect", or "reveal"
+   */
+  function endRound(reason) {
+    if (roundOver) return;
+    roundOver = true;
+
+    // Reveal any answers that were not already found
+    currentCategory.answers.forEach((_, index) => {
+      if (!revealed[index]) {
+        revealed[index] = true;
+        updateAnswerSlot(index, true);
+      }
+    });
+
+    // Stop further interaction
+    guessInputEl.disabled = true;
+    submitBtnEl.disabled = true;
+    revealBtnEl.disabled = true;
+
+    const summaryText =
+      'Round over – Category: "' +
+      currentCategory.title +
+      '". You found ' +
+      correctCount +
+      " out of 10 answers with " +
+      strikes +
+      " strike" +
+      (strikes === 1 ? "" : "s") +
+      ".";
+
+    // "Perfect" rounds show as success; others as error-style
+    const summaryType = reason === "perfect" ? "success" : "error";
+    setSummary(summaryText, summaryType);
+  }
+
+  /**
+   * Handle a guess submission from the student.
+   * - Reads the input
+   * - Matches against answers (case-insensitive)
+   * - Updates strikes / revealed answers / messages
+   */
+  function handleGuessSubmit() {
+    if (roundOver) return;
+
+    const rawGuess = guessInputEl.value;
+    const guess = normalize(rawGuess);
+
+    // Blank guess: gentle reminder
+    if (!guess) {
+      setMessage("Please enter a guess.", "error");
+      return;
+    }
+
+    // Try to find the guessed answer in our Top 10 list
+    let foundIndex = -1;
+    currentCategory.answers.forEach((ans, index) => {
+      // short-circuit once we find a match
+      if (foundIndex !== -1) return;
+      if (normalize(ans) === guess) {
+        foundIndex = index;
+      }
+    });
+
+    // If no match → strike
+    if (foundIndex === -1) {
+      strikes++;
+      strikesUsedEl.textContent = strikes.toString();
+      setMessage(
+        '"' + rawGuess + '" is not in the Top 10. That’s a strike.',
+        "error"
+      );
+
+      // If we hit max strikes, automatically end the round
+      if (strikes >= maxStrikes) {
+        setMessage(
+          "You’re out of strikes! Revealing remaining answers...",
+          "error"
+        );
+        endRound("strikes");
+      }
+    } else {
+      // We found a matching Top 10 answer
+      if (revealed[foundIndex]) {
+        // Already revealed → no strike, just feedback
+        setMessage(
+          'You already found "' + currentCategory.answers[foundIndex] + '".',
+          "error"
+        );
+      } else {
+        // Newly revealed answer
+        revealed[foundIndex] = true;
+        correctCount++;
+        correctCountEl.textContent = correctCount.toString();
+        updateAnswerSlot(foundIndex);
+        setMessage(
+          'Correct! You found: "' +
+            currentCategory.answers[foundIndex] +
+            '".',
+          "success"
+        );
+
+        // If student found all 10, perfect round
+        if (correctCount === currentCategory.answers.length) {
+          setMessage("Perfect round! You found all 10 answers.", "success");
+          endRound("perfect");
+        }
+      }
+    }
+
+    // Clear input and return focus
+    guessInputEl.value = "";
+    guessInputEl.focus();
+  }
+
+  /**
+   * Start a new round with a random category:
+   * - Picks a random category
+   * - Resets state
+   * - Renders 10 hidden answer slots
+   */
+  function startNewCategory() {
+    currentCategoryIndex = pickRandomCategoryIndex();
+    if (currentCategoryIndex === -1) return;
+
+    currentCategory = categories[currentCategoryIndex];
+
+    resetStateForNewRound();
+    categoryTitleEl.textContent = currentCategory.title;
+    renderAnswersGrid();
+    guessInputEl.focus();
+  }
+
+  // ------------------------------
+  // 5. Event listeners
+  // ------------------------------
+
+  // Handle click on "Submit Guess"
+  submitBtnEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    handleGuessSubmit();
+  });
+
+  // Pressing Enter in the input also submits the guess
+  guessInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleGuessSubmit();
+    }
+  });
+
+  // Reveal remaining answers manually (teacher option / student bailout)
+  revealBtnEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (roundOver) return;
+    setMessage("Revealing all remaining answers for this category.", "error");
+    endRound("reveal");
+  });
+
+  // Move to a new random category
+  nextBtnEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    startNewCategory();
+  });
+
+  // Go back to the CS games menu page
+  backBtnEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    // Path assumes this file is at games/cs/cs_tenable.html
+    window.location.href = "../../cs_games.html";
+  });
+
+  // ------------------------------
+  // 6. Kick off the first round
+  // ------------------------------
+  startNewCategory();
+});
