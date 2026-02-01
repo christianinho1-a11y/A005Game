@@ -32,6 +32,18 @@ body.cs-body {
   color: var(--text-main);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
+
 /* ==== LAYOUT WRAPPERS ==== */
 
 .back-link {
@@ -323,6 +335,69 @@ body.cs-body {
   font-size: 0.85rem;
 }
 
+/* ==== CS TENABLE ==== */
+
+.tenable-scoreboard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  text-align: right;
+}
+
+.tenable-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.tenable-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  min-height: 52px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed #1f2937;
+  background: #0b1224;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.tenable-slot.revealed {
+  border-style: solid;
+  border-color: rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.tenable-slot-index {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tenable-message,
+.tenable-summary {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.tenable-message.success {
+  color: #86efac;
+}
+
+.tenable-message.warning {
+  color: #fca5a5;
+}
+
+.tenable-message.info,
+.tenable-summary.info {
+  color: #bfdbfe;
+}
+
 /* ==== HUB (HOME PAGE) STYLES ==== */
 
 .hub-meta {
@@ -429,19 +504,6 @@ body.cs-body {
   color: #e5e7eb;
 }
 
-/* ==== ACCESSIBILITY ==== */
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
-
 /* ==== SUBJECT SELECTION (INDEX PAGE) ==== */
 
 .subject-grid {
@@ -501,5 +563,3 @@ body.cs-body {
 .subject-list li {
   margin-bottom: 0.2rem;
 }
-
-
